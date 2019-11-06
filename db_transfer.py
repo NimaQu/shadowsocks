@@ -1,4 +1,4 @@
-﻿#!/usr/bin/python
+#!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
 import logging
@@ -377,11 +377,38 @@ class DbTransfer(object):
                     ") OR `is_admin`=1) AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
         rows = []
         for r in cur.fetchall():
+            # 自定义单端口：跳过单端口承载用户
+            if self.mu_only == 2:
+                if r[17] == 1:
+                    continue
             d = {}
             for column in range(len(keys)):
                 d[keys[column]] = r[column]
             rows.append(d)
         cur.close()
+
+        #自定义单端口：添加自定义承载用户
+        if self.mu_only == 2:
+            params = str(nodeinfo[6]).split(',')
+            d = {}
+            d['id'] = 0
+            d['port'] = int(params[0])
+            d['u'] = 0
+            d['d'] = 0
+            d['transfer_enable'] = 21474836480000
+            d['passwd'] = params[1]
+            d['enable'] = 1
+            d['method'] = params[2]
+            d['protocol'] = params[3]
+            d['protocol_param'] = ''
+            d['obfs'] = params[4]
+            d['obfs_param'] = ''
+            d['node_speedlimit'] = 0
+            d['forbidden_ip'] = ''
+            d['forbidden_port'] = ''
+            d['disconnect_ip'] = ''
+            d['is_multi_user'] = 1
+            rows.append(d)
 
         # 读取节点IP
         # SELECT * FROM `ss_node`  where `node_ip` != ''
@@ -539,7 +566,7 @@ class DbTransfer(object):
             self.port_uid_table[row['port']] = row['id']
             self.uid_port_table[row['id']] = row['port']
 
-        if self.mu_only == 1:
+        if self.mu_only == 1 or self.mu_only == 2:
             i = 0
             while i < len(rows):
                 if rows[i]['is_multi_user'] == 0:
